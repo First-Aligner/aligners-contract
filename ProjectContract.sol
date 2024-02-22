@@ -4,7 +4,7 @@ import "@openzeppelin/contracts@4.7.3/token/ERC20/IERC20.sol";
 
 // Or VestingContract
 contract ProjectContract {
-    IERC20 public token;
+    IERC20 public IVO;
     address public owner;
     string public projectName;
     string public projectDescription;
@@ -23,13 +23,13 @@ contract ProjectContract {
         uint256 ivoPrice; // IVO price in USDT
     }
     struct Bid {
-        address bidder;
         uint256 allocationSize;
         uint256 vestingLength;
         uint256 timestamp; // Include the current UTC timestamp
     }
 
-    mapping(uint256 => Bid) public bids;
+    mapping(address => Bid) public bids;
+
     uint256 public bidCounter = 0;
 
     // Events to log important activities
@@ -40,7 +40,6 @@ contract ProjectContract {
     );
     event BiddingEnded(); // Added event to log the end of bidding
     event BidPlaced(
-        address bidder,
         uint256 allocationSize,
         uint256 vestingLength,
         uint256 timestamp
@@ -71,7 +70,7 @@ contract ProjectContract {
         uint256 _biddingStartDate,
         uint256 _biddingDuration // Added parameter for bidding duration
     ) {
-        token = IERC20(_token);
+        IVO = IERC20(_token);
         owner = msg.sender;
         projectName = _projectName;
         projectDescription = _projectDescription;
@@ -100,31 +99,26 @@ contract ProjectContract {
             "Vesting lengths must be greater than 0 and multiple of 3 months"
         );
 
-        // Transfer the bid amount in tokens from the bidder to the contract
-        require(
-            token.transferFrom(msg.sender, address(this), _allocationSize),
-            "Failed to transfer tokens"
-        );
-
-        // Store bid information in the mapping
-        bids[bidCounter] = Bid({
-            bidder: msg.sender,
-            allocationSize: _allocationSize,
-            vestingLength: _vestingLength,
-            timestamp: block.timestamp
-        });
-        // Increment the bid counter to get a unique bid ID
-        bidCounter++;
-
+        // Check if the bidder has an existing bid
+        if (bids[msg.sender].timestamp == 0) {
+            // If no existing bid, create a new bid record
+            bids[msg.sender] = Bid({
+                allocationSize: _allocationSize,
+                vestingLength: _vestingLength,
+                timestamp: block.timestamp
+            });
+            // Increment the bid counter to get a unique bid ID
+            bidCounter++;
+        } else {
+            // If an existing bid is found, update the existing bid record
+            bids[msg.sender].allocationSize += _allocationSize;
+            bids[msg.sender].vestingLength += _vestingLength;
+            bids[msg.sender].timestamp = block.timestamp;
+        }
 
         // Emit an event to log the bid placement
         // You can customize the event parameters based on your contract requirements
-        emit BidPlaced(
-            msg.sender,
-            _allocationSize,
-            _vestingLength,
-            block.timestamp
-        );
+        emit BidPlaced(_allocationSize, _vestingLength, block.timestamp);
     }
 
     // Function to add a vesting round
@@ -134,7 +128,7 @@ contract ProjectContract {
         emit BiddingEnded();
 
         // TODO: after End bidding must:
-        // - sort bids based on allocationSize 
+        // - sort bids based on allocationSize
         // - calculate the IVO token count for each bid for each round in the Vesting
     }
 
