@@ -62,16 +62,6 @@ contract ProjectContract {
         _;
     }
 
-    modifier vestingRoundsNotCompleted() {
-        VestingRound storage round = vestingRounds[vestingRounds.length - 1];
-        require(
-            currentRound >= 0 &&
-                (round.completed || round.bidsCount >= round.roundAmount),
-            "All vesting rounds completed"
-        );
-        _;
-    }
-
     // Constructor to initialize the contract
     constructor(
         address _token,
@@ -126,6 +116,7 @@ contract ProjectContract {
         // Increment the bid counter to get a unique bid ID
         bidCounter++;
 
+
         // Emit an event to log the bid placement
         // You can customize the event parameters based on your contract requirements
         emit BidPlaced(
@@ -141,6 +132,10 @@ contract ProjectContract {
         require(biddingActive, "Bidding has already ended");
         biddingActive = false;
         emit BiddingEnded();
+
+        // TODO: after End bidding must:
+        // - sort bids based on allocationSize 
+        // - calculate the IVO token count for each bid for each round in the Vesting
     }
 
     // Function to add a vesting round
