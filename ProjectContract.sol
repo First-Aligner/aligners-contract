@@ -14,22 +14,23 @@ contract ProjectContract {
     bool public biddingActive; // Added variable to track bidding status
     VestingRound[] public vestingRounds;
     // Add a variable to track the current round
-    uint256 public currentRound = 0;
 
     struct VestingRound {
         uint256 roundAmount; // Round vesting amount (default 100 000 IVO)
-        uint256 bidsCount; // Number of bids placed in this round
+        uint256 bidsAmount; // Amount of bids placed in this round
         bool completed; // Flag to track if the round is completed
         uint256 ivoPrice; // IVO price in USDT
     }
+
     struct Bid {
         uint256 allocationSize;
         uint256 vestingLength;
+        uint256 allocationIVOSize;
         uint256 timestamp; // Include the current UTC timestamp
     }
 
     mapping(address => Bid) public bids;
-
+    address[] public bidderAddresses;
     uint256 public bidCounter = 0;
 
     // Events to log important activities
@@ -105,10 +106,12 @@ contract ProjectContract {
             bids[msg.sender] = Bid({
                 allocationSize: _allocationSize,
                 vestingLength: _vestingLength,
+                allocationIVOSize: 0,
                 timestamp: block.timestamp
             });
             // Increment the bid counter to get a unique bid ID
             bidCounter++;
+            bidderAddresses.push(msg.sender);
         } else {
             // If an existing bid is found, update the existing bid record
             bids[msg.sender].allocationSize += _allocationSize;
@@ -127,9 +130,80 @@ contract ProjectContract {
         biddingActive = false;
         emit BiddingEnded();
 
-        // TODO: after End bidding must:
-        // - sort bids based on allocationSize
-        // - calculate the IVO token count for each bid for each round in the Vesting
+        // Sort bids based on allocation size in descending order
+        address[] memory bidders = new address[](bidCounter);
+        uint256[] memory allocationSizes = new uint256[](bidCounter);
+
+        // Populate arrays with bidder addresses and their allocation sizes
+        for (uint256 i = 0; i < bidCounter; i++) {
+            // for (address bidderAddress : bids) {
+            address bidderAddress = bidderAddresses[i];
+            bidders[i] = bidderAddress;
+            allocationSizes[i] = bids[bidderAddress].allocationSize;
+        }
+
+        // Use a sorting function to sort in descending order
+        selectionSort(bidders, allocationSizes);
+
+        // TODO: after End bidding and sorting must:
+        // - Calculate the IVO tokens count for each bidder where the first bidding(highst allocationSize) take tokens first from the Vesting round and when the round completed start the next round
+
+        // Calculate IVO tokens for each bidder and deduct from vesting rounds
+        for (uint256 i = 0; i < bidCounter; i++) {
+            address bidder = bidders[i];
+            uint256 allocationSizeUSDT = bids[bidder].allocationSize;
+
+            // Iterate through vesting rounds
+            for (uint256 j = 0; j < vestingRounds.length; j++) {
+                VestingRound storage round = vestingRounds[j];
+                uint256 allocationIVO = allocationSizeUSDT / round.ivoPrice;
+                // Store the original round amount
+                uint256 leftRoundAmount = round.roundAmount - round.bidsAmount;
+
+                // Calculate tokens to deduct from this round
+                uint256 tokensToDeduct = allocationIVO < leftRoundAmount
+                    ? allocationIVO
+                    : leftRoundAmount;
+
+                // Add tokens to the round and bidder
+                round.bidsAmount += tokensToDeduct;
+                bids[bidder].allocationIVOSize += tokensToDeduct;
+
+                // Update the bidder's allocation
+                allocationIVO -= tokensToDeduct;
+                allocationSizeUSDT -= tokensToDeduct * round.ivoPrice;
+
+                // Check if the round is completed
+                if (round.roundAmount - round.bidsAmount <= 0)
+                    round.completed = true;
+
+                // Check if the bidder's allocation is fully processed
+                if (allocationSizeUSDT <= 0) break;
+            }
+
+            // TODO: Transfer IVO tokens to the bidder (use IVO.transfer method) Based on the Vesting schedule
+        }
+    }
+
+    function selectionSort(
+        address[] memory bidders,
+        uint256[] memory allocationSizes
+    ) internal pure {
+        uint256 n = bidders.length;
+        for (uint256 i = 0; i < n - 1; i++) {
+            uint256 maxIndex = i;
+            // Find the index of the maximum element in the unsorted part
+            for (uint256 j = i + 1; j < n; j++)
+                if (allocationSizes[j] > allocationSizes[maxIndex])
+                    maxIndex = j;
+
+            // Swap the found maximum element with the first element
+            (bidders[i], bidders[maxIndex]) = (bidders[maxIndex], bidders[i]);
+            (allocationSizes[i], allocationSizes[maxIndex]) = (
+                allocationSizes[maxIndex],
+                allocationSizes[i]
+            );
+        }
     }
 
     // Function to add a vesting round
