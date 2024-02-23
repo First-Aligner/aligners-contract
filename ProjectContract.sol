@@ -145,9 +145,6 @@ contract ProjectContract {
         // Use a sorting function to sort in descending order
         selectionSort(bidders, allocationSizes);
 
-        // TODO: after End bidding and sorting must:
-        // - Calculate the IVO tokens count for each bidder where the first bidding(highst allocationSize) take tokens first from the Vesting round and when the round completed start the next round
-
         // Calculate IVO tokens for each bidder and deduct from vesting rounds
         for (uint256 i = 0; i < bidCounter; i++) {
             address bidder = bidders[i];
@@ -181,7 +178,13 @@ contract ProjectContract {
                 if (allocationSizeUSDT <= 0) break;
             }
 
-            // TODO: Transfer IVO tokens to the bidder (use IVO.transfer method) Based on the Vesting schedule
+            // Transfer IVO tokens to the contract
+            uint256 vestedAmount = bids[bidder].allocationIVOSize;
+            require(
+                IVO.transferFrom(owner, address(this), vestedAmount),
+                "Token transfer failed"
+            );
+            // TODO: create withdrow function to collect the tokens depend on the vesting schedule
         }
     }
 
