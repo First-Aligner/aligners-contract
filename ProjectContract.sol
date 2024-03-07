@@ -27,6 +27,8 @@ contract ProjectContract {
         uint256 vestingLength;
         uint256 allocationIVOSize;
         uint256 timestamp; // Include the current UTC timestamp
+        uint256 lockedIVOSize;
+        bool locked;
     }
 
     mapping(address => Bid) public bids;
@@ -43,6 +45,11 @@ contract ProjectContract {
     event BidPlaced(
         uint256 allocationSize,
         uint256 vestingLength,
+        uint256 timestamp
+    );
+    event Withdrawal(
+        address indexed bidder,
+        uint256 vestedAmount,
         uint256 timestamp
     );
 
@@ -107,7 +114,9 @@ contract ProjectContract {
                 allocationSize: _allocationSize,
                 vestingLength: _vestingLength,
                 allocationIVOSize: 0,
-                timestamp: block.timestamp
+                timestamp: block.timestamp,
+                lockedIVOSize: 0,
+                locked: false
             });
             // Increment the bid counter to get a unique bid ID
             bidCounter++;
@@ -225,5 +234,70 @@ contract ProjectContract {
     // Function to get the total number of vesting rounds
     function getNumberOfVestingRounds() external view returns (uint256) {
         return vestingRounds.length;
+    }
+
+    function withdraw() external {
+        require(!biddingActive, "Bidding must be ended to withdraw");
+        require(bids[msg.sender].timestamp > 0, "No bid found for the sender");
+
+        uint256 vestedAmount = calculateVestedAmount(msg.sender);
+
+        // Check if the user has any new vested amount to withdraw
+        require(vestedAmount > 0, "No new vested amount to withdraw");
+        // Transfer the vested amount to the user
+        require(
+            IVO.transfer(msg.sender, vestedAmount),
+            "Token transfer failed during withdrawal"
+        );
+
+        bids[msg.sender].lockedIVOSize += vestedAmount;
+        if (
+            bids[msg.sender].lockedIVOSize >= bids[msg.sender].allocationIVOSize
+        ) bids[msg.sender].locked = true;
+
+        emit Withdrawal(msg.sender, vestedAmount, block.timestamp);
+    }
+
+    // function calculateVestedAmount(address bidder)
+    //     internal
+    //     view
+    //     returns (uint256)
+    // {
+    //     uint256 vestedAmount = bids[bidder].allocationIVOSize;
+    //     uint256 lockedAmount = bids[bidder].lockedIVOSize;
+    //     uint256 totalVestingLength = bids[bidder].vestingLength; // per month
+
+    //     // TODO divide it equaly each month
+
+    //     return vestedAmount;
+    // }
+
+    function calculateVestedAmount(address bidder)
+        internal
+        view
+        returns (uint256)
+    {
+        Bid storage bid = bids[bidder];
+        uint256 vestedAmount = 0;
+
+        if (bid.timestamp > 0) {
+            // Calculate the monthly vesting amount
+            uint256 monthlyVestingAmount = bid.allocationIVOSize /
+                bid.vestingLength;
+            // Calculate the elapsed months since the bid was placed
+            uint256 elapsedMonths = (block.timestamp - bid.timestamp) / 30 days;
+            // Calculate the total vested amount based on the vesting schedule
+            vestedAmount = monthlyVestingAmount * elapsedMonths;
+
+            // Ensure vested amount does not exceed the total allocation
+            vestedAmount = (vestedAmount > bid.allocationIVOSize)
+                ? bid.allocationIVOSize
+                : vestedAmount;
+
+            // Subtract any previously locked amount
+            vestedAmount -= bid.lockedIVOSize;
+        }
+
+        return vestedAmount;
     }
 }
