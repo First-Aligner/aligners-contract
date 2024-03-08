@@ -4,7 +4,7 @@ import "@openzeppelin/contracts@4.7.3/token/ERC20/IERC20.sol";
 
 // Or VestingContract
 contract ProjectContract {
-    IERC20 public IVO;
+    IERC20 public IWO;
     address public owner;
     string public projectName;
     string public projectDescription;
@@ -16,18 +16,18 @@ contract ProjectContract {
     // Add a variable to track the current round
 
     struct VestingRound {
-        uint256 roundAmount; // Round vesting amount (default 100 000 IVO)
+        uint256 roundAmount; // Round vesting amount (default 100 000 IWO)
         uint256 bidsAmount; // Amount of bids placed in this round
         bool completed; // Flag to track if the round is completed
-        uint256 ivoPrice; // IVO price in USDT
+        uint256 iwoPrice; // IWO price in USDT
     }
 
     struct Bid {
         uint256 allocationSize;
         uint256 vestingLength;
-        uint256 allocationIVOSize;
+        uint256 allocationIWOSize;
         uint256 timestamp; // Include the current UTC timestamp
-        uint256 lockedIVOSize;
+        uint256 lockedIWOSize;
         bool locked;
     }
 
@@ -39,7 +39,7 @@ contract ProjectContract {
     event VestingRoundAdded(
         uint256 roundIndex,
         uint256 roundAmount,
-        uint256 ivoPrice
+        uint256 iwoPrice
     );
     event BiddingEnded(); // Added event to log the end of bidding
     event BidPlaced(
@@ -78,7 +78,7 @@ contract ProjectContract {
         uint256 _biddingStartDate,
         uint256 _biddingDuration // Added parameter for bidding duration
     ) {
-        IVO = IERC20(_token);
+        IWO = IERC20(_token);
         owner = msg.sender;
         projectName = _projectName;
         projectDescription = _projectDescription;
@@ -113,9 +113,9 @@ contract ProjectContract {
             bids[msg.sender] = Bid({
                 allocationSize: _allocationSize,
                 vestingLength: _vestingLength,
-                allocationIVOSize: 0,
+                allocationIWOSize: 0,
                 timestamp: block.timestamp,
-                lockedIVOSize: 0,
+                lockedIWOSize: 0,
                 locked: false
             });
             // Increment the bid counter to get a unique bid ID
@@ -154,7 +154,7 @@ contract ProjectContract {
         // Use a sorting function to sort in descending order
         selectionSort(bidders, allocationSizes);
 
-        // Calculate IVO tokens for each bidder and deduct from vesting rounds
+        // Calculate IWO tokens for each bidder and deduct from vesting rounds
         for (uint256 i = 0; i < bidCounter; i++) {
             address bidder = bidders[i];
             uint256 allocationSizeUSDT = bids[bidder].allocationSize;
@@ -162,22 +162,22 @@ contract ProjectContract {
             // Iterate through vesting rounds
             for (uint256 j = 0; j < vestingRounds.length; j++) {
                 VestingRound storage round = vestingRounds[j];
-                uint256 allocationIVO = allocationSizeUSDT / round.ivoPrice;
+                uint256 allocationIWO = allocationSizeUSDT / round.iwoPrice;
                 // Store the original round amount
                 uint256 leftRoundAmount = round.roundAmount - round.bidsAmount;
 
                 // Calculate tokens to deduct from this round
-                uint256 tokensToDeduct = allocationIVO < leftRoundAmount
-                    ? allocationIVO
+                uint256 tokensToDeduct = allocationIWO < leftRoundAmount
+                    ? allocationIWO
                     : leftRoundAmount;
 
                 // Add tokens to the round and bidder
                 round.bidsAmount += tokensToDeduct;
-                bids[bidder].allocationIVOSize += tokensToDeduct;
+                bids[bidder].allocationIWOSize += tokensToDeduct;
 
                 // Update the bidder's allocation
-                allocationIVO -= tokensToDeduct;
-                allocationSizeUSDT -= tokensToDeduct * round.ivoPrice;
+                allocationIWO -= tokensToDeduct;
+                allocationSizeUSDT -= tokensToDeduct * round.iwoPrice;
 
                 // Check if the round is completed
                 if (round.roundAmount - round.bidsAmount <= 0)
@@ -187,10 +187,10 @@ contract ProjectContract {
                 if (allocationSizeUSDT <= 0) break;
             }
 
-            // Transfer IVO tokens to the contract
-            uint256 vestedAmount = bids[bidder].allocationIVOSize;
+            // Transfer IWO tokens to the contract
+            uint256 vestedAmount = bids[bidder].allocationIWOSize;
             require(
-                IVO.transferFrom(owner, address(this), vestedAmount),
+                IWO.transferFrom(owner, address(this), vestedAmount),
                 "Token transfer failed"
             );
             // TODO: create withdrow function to collect the tokens depend on the vesting schedule
@@ -219,16 +219,16 @@ contract ProjectContract {
     }
 
     // Function to add a vesting round
-    function addVestingRound(uint256 _roundAmount, uint256 _ivoPrice)
+    function addVestingRound(uint256 _roundAmount, uint256 _iwoPrice)
         external
         onlyOwner
         onlyDuringBidding // Ensure that vesting rounds can only be added during the bidding period
     {
         uint256 roundIndex = vestingRounds.length;
-        vestingRounds.push(VestingRound(_roundAmount, 0, false, _ivoPrice));
+        vestingRounds.push(VestingRound(_roundAmount, 0, false, _iwoPrice));
 
         // Emit an event to log the addition of a vesting round
-        emit VestingRoundAdded(roundIndex, _roundAmount, _ivoPrice);
+        emit VestingRoundAdded(roundIndex, _roundAmount, _iwoPrice);
     }
 
     // Function to get the total number of vesting rounds
@@ -246,13 +246,13 @@ contract ProjectContract {
         require(vestedAmount > 0, "No new vested amount to withdraw");
         // Transfer the vested amount to the user
         require(
-            IVO.transfer(msg.sender, vestedAmount),
+            IWO.transfer(msg.sender, vestedAmount),
             "Token transfer failed during withdrawal"
         );
 
-        bids[msg.sender].lockedIVOSize += vestedAmount;
+        bids[msg.sender].lockedIWOSize += vestedAmount;
         if (
-            bids[msg.sender].lockedIVOSize >= bids[msg.sender].allocationIVOSize
+            bids[msg.sender].lockedIWOSize >= bids[msg.sender].allocationIWOSize
         ) bids[msg.sender].locked = true;
 
         emit Withdrawal(msg.sender, vestedAmount, block.timestamp);
@@ -263,8 +263,8 @@ contract ProjectContract {
     //     view
     //     returns (uint256)
     // {
-    //     uint256 vestedAmount = bids[bidder].allocationIVOSize;
-    //     uint256 lockedAmount = bids[bidder].lockedIVOSize;
+    //     uint256 vestedAmount = bids[bidder].allocationIWOSize;
+    //     uint256 lockedAmount = bids[bidder].lockedIWOSize;
     //     uint256 totalVestingLength = bids[bidder].vestingLength; // per month
 
     //     // TODO divide it equaly each month
@@ -282,7 +282,7 @@ contract ProjectContract {
 
         if (bid.timestamp > 0) {
             // Calculate the monthly vesting amount
-            uint256 monthlyVestingAmount = bid.allocationIVOSize /
+            uint256 monthlyVestingAmount = bid.allocationIWOSize /
                 bid.vestingLength;
             // Calculate the elapsed months since the bid was placed
             uint256 elapsedMonths = (block.timestamp - bid.timestamp) / 30 days;
@@ -290,12 +290,12 @@ contract ProjectContract {
             vestedAmount = monthlyVestingAmount * elapsedMonths;
 
             // Ensure vested amount does not exceed the total allocation
-            vestedAmount = (vestedAmount > bid.allocationIVOSize)
-                ? bid.allocationIVOSize
+            vestedAmount = (vestedAmount > bid.allocationIWOSize)
+                ? bid.allocationIWOSize
                 : vestedAmount;
 
             // Subtract any previously locked amount
-            vestedAmount -= bid.lockedIVOSize;
+            vestedAmount -= bid.lockedIWOSize;
         }
 
         return vestedAmount;

@@ -5,13 +5,13 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
-contract MyToken is ERC20, Ownable, ERC20Permit {
+contract IWO is ERC20, Ownable, ERC20Permit {
     constructor(address initialOwner)
-        ERC20("MyToken", "MTK")
+        ERC20("IWO", "IWO")
         Ownable(initialOwner)
-        ERC20Permit("MyToken")
+        ERC20Permit("IWO")
     {
-        _mint(msg.sender, 10000 * 10**decimals());
+        _mint(msg.sender, 100000000 * 10**decimals());
     }
 
     function mint(address to, uint256 amount) public onlyOwner {
