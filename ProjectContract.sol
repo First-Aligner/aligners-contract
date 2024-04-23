@@ -19,6 +19,7 @@ contract ProjectContract {
         uint256 bidCounter;
         VestingRound[] vestingRounds;
         address referralAddress;
+        mapping(address => bool) whitelist; // Mapping to store whitelist status for each project
     }
 
     struct VestingRound {
@@ -103,6 +104,15 @@ contract ProjectContract {
         _;
     }
 
+    // Modifier to check if the sender is whitelisted for the specific project
+    modifier onlyWhitelisted(uint256 projectId) {
+        require(
+            projects[projectId].whitelist[msg.sender],
+            "Address not whitelisted for this project"
+        );
+        _;
+    }
+
     constructor(address _token) {
         IWO = IERC20(_token);
         owner = msg.sender;
@@ -133,7 +143,7 @@ contract ProjectContract {
         uint256 projectId,
         uint256 _allocationSize,
         uint256 _vestingLength
-    ) public payable onlyDuringBidding(projectId) {
+    ) public payable onlyDuringBidding(projectId) onlyWhitelisted(projectId) {
         Project storage project = projects[projectId];
         require(msg.value > 0, "Bid amount must be greater than 0");
         require(msg.value >= _allocationSize, "Incorrect bid amount sent");
@@ -478,12 +488,13 @@ contract ProjectContract {
         return claimingDetails;
     }
 
-    function withdraw(uint256 projectId) external biddingEnded(projectId){
+    function withdraw(uint256 projectId) external biddingEnded(projectId) {
         Project storage project = projects[projectId];
         Bid storage bid = project.bids[msg.sender];
         require(!project.biddingActive, "Bidding must be ended to withdraw");
         require(bid.timestamp > 0, "No bid found for the sender");
-        uint256 currentMonth = (block.timestamp - project.biddingEndDate) / period;
+        uint256 currentMonth = (block.timestamp - project.biddingEndDate) /
+            period;
         require(currentMonth > 0, "No vested amount to withdraw yet");
 
         uint256 vestedAmount = calculateVestedAmount(
@@ -509,5 +520,21 @@ contract ProjectContract {
         }
 
         emit Withdrawal(projectId, msg.sender, vestedAmount, block.timestamp);
+    }
+
+    // Function to add an address to the whitelist for a specific project
+    function addToWhitelist(uint256 projectId, address _address)
+        public
+        onlyOwner
+    {
+        projects[projectId].whitelist[_address] = true;
+    }
+
+    // Function to remove an address from the whitelist for a specific project
+    function removeFromWhitelist(uint256 projectId, address _address)
+        public
+        onlyOwner
+    {
+        projects[projectId].whitelist[_address] = false;
     }
 }
