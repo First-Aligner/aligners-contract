@@ -1,0 +1,21 @@
+Test Case 1:
+
+Rounds:
+_roundAmount(number of tokens): 19000    8000     
+_iwoPrice( in USDT )          :   1       2
+
+Bids:
+_allocationSize(in USDT)           :  400   100   1000  10000  12000
+_vestingLength (months)            :   21   12     27    66     84
+____________________________________________________________________
+allocationIWOSize(number of tokens):  50   200  500   8500   12000
+
+
+- R1    R2
+------------
+- 19000 8000
+- 7000  8000
+- 0     6500
+- 0     6000
+- 0     5800
+- 0     5750
