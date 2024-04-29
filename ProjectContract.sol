@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts@4.7.3/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "./AlignerNFT.sol";
 
 contract ProjectContract {
     IERC20 public IWO;
+    AlignerNFT public NFTContract;
+    // AlignerNFT public nftContract;
     address owner;
 
     struct Project {
@@ -113,9 +117,18 @@ contract ProjectContract {
         _;
     }
 
-    constructor(address _token) {
+    modifier onlyNFTHolder() {
+        require(
+            NFTContract.balanceOf(msg.sender) > 0,
+            "Only NFT holders of this project can perform this action"
+        );
+        _;
+    }
+
+    constructor(address _token, address nftAddress) {
         IWO = IERC20(_token);
         owner = msg.sender;
+        NFTContract = AlignerNFT(nftAddress);
     }
 
     function createProject(
@@ -248,6 +261,7 @@ contract ProjectContract {
                 "Token transfer failed"
             );
         }
+        mintNFT(projectId);
     }
 
     function selectionSort(
@@ -268,6 +282,17 @@ contract ProjectContract {
                 allocationSizes[maxIndex],
                 allocationSizes[i]
             );
+        }
+    }
+
+    function mintNFT(uint256 projectId) internal {
+        // Mint NFT to successful bidders
+        address[] memory bidders = projects[projectId].bidderAddresses;
+        for (uint256 i = 0; i < bidders.length; i++) {
+            address bidder = bidders[i];
+            if (projects[projectId].bids[bidder].allocationIWOSize > 0) {
+                NFTContract.safeMint(bidder);
+            }
         }
     }
 
@@ -488,7 +513,11 @@ contract ProjectContract {
         return claimingDetails;
     }
 
-    function withdraw(uint256 projectId) external biddingEnded(projectId) {
+    function withdraw(uint256 projectId)
+        external
+        biddingEnded(projectId)
+        onlyNFTHolder
+    {
         Project storage project = projects[projectId];
         Bid storage bid = project.bids[msg.sender];
         require(!project.biddingActive, "Bidding must be ended to withdraw");
