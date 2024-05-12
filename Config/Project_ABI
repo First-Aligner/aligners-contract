@@ -10,6 +10,16 @@
 				"internalType": "address",
 				"name": "nftAddress",
 				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_usdtAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_referralAddress",
+				"type": "address"
 			}
 		],
 		"stateMutability": "nonpayable",
@@ -140,6 +150,19 @@
 		"outputs": [
 			{
 				"internalType": "contract AlignerNFT",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "USDT",
+		"outputs": [
+			{
+				"internalType": "contract IERC20",
 				"name": "",
 				"type": "address"
 			}
@@ -665,6 +688,19 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "referralAddress",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -706,6 +742,152 @@
 				"internalType": "uint256",
 				"name": "projectId",
 				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "newBiddingStartDate",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "newBiddingEndDate",
+				"type": "uint256"
+			}
+		],
+		"name": "updateBiddingDates",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "updateOwner",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "projectId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "newProjectName",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "newProjectDescription",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "newSocialInfo",
+				"type": "string"
+			}
+		],
+		"name": "updateProjectDetails",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newReferralAddress",
+				"type": "address"
+			}
+		],
+		"name": "updateReferralAddress",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "projectId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "newReferralAddress",
+				"type": "address"
+			}
+		],
+		"name": "updateReferralAddress",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newIWOAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "newUSDTAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "newNFTAddress",
+				"type": "address"
+			}
+		],
+		"name": "updateTokenAddresses",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "projectId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "roundIndex",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "newRoundAmount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "newIwoPrice",
+				"type": "uint256"
+			}
+		],
+		"name": "updateVestingRound",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "projectId",
+				"type": "uint256"
 			}
 		],
 		"name": "withdraw",
@@ -714,7 +896,10 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "withdrawUSDT",
+		"outputs": [],
 		"stateMutability": "payable",
-		"type": "receive"
+		"type": "function"
 	}
 ]
