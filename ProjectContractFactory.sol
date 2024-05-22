@@ -10,7 +10,7 @@ contract ProjectContract {
     IERC20 public USDT;
     AlignerNFT public NFTContract;
     address owner;
-    address public referralAddress; // Referral address that can act as owner
+    address public operatorAddress; // Operator address that can act as owner
     mapping(uint256 => Project) public projects;
     uint256 public projectCounter;
 
@@ -27,7 +27,7 @@ contract ProjectContract {
         address[] bidderAddresses;
         uint256 bidCounter;
         VestingRound[] vestingRounds;
-        address referralAddress;
+        address operatorAddress;
         mapping(address => bool) whitelist; // Mapping to store whitelist status for each project
     }
     struct VestingRound {
@@ -72,10 +72,10 @@ contract ProjectContract {
         require(msg.sender == owner, "Only the owner can call this function");
         _;
     }
-    modifier onlyOwnerOrReferral() {
+    modifier onlyOwnerOrOperator() {
         require(
-            msg.sender == owner || msg.sender == referralAddress,
-            "Not owner or referral"
+            msg.sender == owner || msg.sender == operatorAddress,
+            "Not owner or operator"
         );
         _;
     }
@@ -86,11 +86,11 @@ contract ProjectContract {
         );
         _;
     }
-    modifier onlyProjectOwnerOrReferral(uint256 projectId) {
+    modifier onlyProjectOwnerOrOperator(uint256 projectId) {
         require(
-            msg.sender == projects[projectId].referralAddress ||
+            msg.sender == projects[projectId].operatorAddress ||
                 msg.sender == projects[projectId].owner,
-            "Only referral address or owner can call this function"
+            "Only operator address or owner can call this function"
         );
         _;
     }
@@ -132,13 +132,13 @@ contract ProjectContract {
         address _token,
         address nftAddress,
         address _usdtAddress,
-        address _referralAddress
+        address _operatorAddress
     ) {
         IWO = IERC20(_token);
         owner = msg.sender;
         NFTContract = AlignerNFT(nftAddress);
         USDT = IERC20(_usdtAddress);
-        referralAddress = _referralAddress; // Initialize referral address in constructor
+        operatorAddress = _operatorAddress; // Initialize operator address in constructor
     }
 
     // Functions
@@ -148,7 +148,7 @@ contract ProjectContract {
         string memory _socialInfo,
         uint256 _biddingStartDate,
         uint256 _biddingDuration
-    ) public onlyOwnerOrReferral returns (uint256) {
+    ) public onlyOwnerOrOperator returns (uint256) {
         projectCounter++;
         uint256 projectId = projectCounter;
         Project storage project = projects[projectId];
@@ -159,7 +159,7 @@ contract ProjectContract {
         project.biddingStartDate = _biddingStartDate;
         project.biddingEndDate = _biddingStartDate + _biddingDuration;
         project.biddingActive = true;
-        project.referralAddress = address(0); // No referral address initially
+        project.operatorAddress = address(0); // No operator address initially
         return projectId;
     }
 
@@ -217,7 +217,7 @@ contract ProjectContract {
     function endBidding(uint256 projectId)
         external
         payable
-        onlyProjectOwnerOrReferral(projectId)
+        onlyProjectOwnerOrOperator(projectId)
     {
         Project storage project = projects[projectId];
         require(project.biddingActive, "Bidding has already ended");
@@ -320,7 +320,7 @@ contract ProjectContract {
         uint256 _iwoPrice
     )
         external
-        onlyProjectOwnerOrReferral(projectId)
+        onlyProjectOwnerOrOperator(projectId)
         onlyDuringBidding(projectId)
     {
         Project storage project = projects[projectId];
@@ -331,11 +331,11 @@ contract ProjectContract {
         emit VestingRoundAdded(projectId, roundIndex, _roundAmount, _iwoPrice);
     }
 
-    function setReferralAddress(uint256 projectId, address _referralAddress)
+    function setOperatorAddress(uint256 projectId, address _operatorAddress)
         external
         onlyProjectOwner(projectId)
     {
-        projects[projectId].referralAddress = _referralAddress;
+        projects[projectId].operatorAddress = _operatorAddress;
     }
 
     function getNumberOfVestingRounds(uint256 projectId)
@@ -400,7 +400,7 @@ contract ProjectContract {
             project.biddingStartDate,
             project.biddingEndDate,
             project.biddingActive,
-            project.referralAddress
+            project.operatorAddress
         );
     }
 
@@ -413,7 +413,7 @@ contract ProjectContract {
         uint256 biddingEndDate;
         bool biddingActive;
         uint256 bidCounter;
-        address referralAddress;
+        address operatorAddress;
         VestingRound[] vestingRounds;
         Bid[] bids;
     }
@@ -431,7 +431,7 @@ contract ProjectContract {
                 biddingEndDate: project.biddingEndDate,
                 biddingActive: project.biddingActive,
                 bidCounter: project.bidCounter,
-                referralAddress: project.referralAddress,
+                operatorAddress: project.operatorAddress,
                 vestingRounds: project.vestingRounds,
                 bids: getBidsArray(project.bidderAddresses, project)
             });
@@ -569,7 +569,7 @@ contract ProjectContract {
     // Function to add an address to the whitelist for a specific project
     function addToWhitelist(uint256 projectId, address _address)
         public
-        onlyOwnerOrReferral
+        onlyOwnerOrOperator
     {
         projects[projectId].whitelist[_address] = true;
     }
@@ -577,7 +577,7 @@ contract ProjectContract {
     // Function to remove an address from the whitelist for a specific project
     function removeFromWhitelist(uint256 projectId, address _address)
         public
-        onlyOwnerOrReferral
+        onlyOwnerOrOperator
     {
         projects[projectId].whitelist[_address] = false;
     }
@@ -626,37 +626,37 @@ contract ProjectContract {
         round.iwoPrice = newIwoPrice;
     }
 
-    function updateReferralAddress(
+    function updateOperatorAddress(
         uint256 projectId,
-        address newReferralAddress
+        address newOperatorAddress
     ) public onlyProjectOwner(projectId) {
         Project storage project = projects[projectId];
-        project.referralAddress = newReferralAddress;
+        project.operatorAddress = newOperatorAddress;
     }
 
     function updateOwner(address newOwner) public onlyOwner {
         owner = newOwner;
     }
 
-    function updateReferralAddress(address newReferralAddress)
+    function updateOperatorAddress(address newOperatorAddress)
         public
-        onlyOwnerOrReferral
+        onlyOwnerOrOperator
     {
-        referralAddress = newReferralAddress;
+        operatorAddress = newOperatorAddress;
     }
 
     function updateTokenAddresses(
         address newIWOAddress,
         address newUSDTAddress,
         address newNFTAddress
-    ) public payable onlyOwnerOrReferral {
+    ) public payable onlyOwnerOrOperator {
         IWO = IERC20(newIWOAddress);
         USDT = IERC20(newUSDTAddress);
         NFTContract = AlignerNFT(newNFTAddress);
     }
 
     // Function to withdraw USDT from the contract by the owner
-    function withdrawUSDT() public payable onlyOwnerOrReferral {
+    function withdrawUSDT() public payable onlyOwnerOrOperator {
         uint256 contractBalance = USDT.balanceOf(address(this));
         require(contractBalance > 0, "Insufficient balance in contract");
 
