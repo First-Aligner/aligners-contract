@@ -3,15 +3,16 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./AlignerNFT.sol";
 
-contract ProjectContract {
+contract ProjectContract is ReentrancyGuard {
     // Global variables
     IERC20 public IWO;
     IERC20 public USDT;
     AlignerNFT public NFTContract;
-    address owner;
-    address public operatorAddress;
+    address public owner;
+    address public operatorAddress; // Operator address that can act as owner
     mapping(uint256 => Project) public projects;
     uint256 public projectCounter;
     mapping(address => address) public referrals; // Mapping to store who referred whom
@@ -130,6 +131,17 @@ contract ProjectContract {
         );
         _;
     }
+    modifier whenNotPaused() {
+        require(!paused, "Contract is paused");
+        _;
+    }
+    modifier whenPaused() {
+        require(paused, "Contract is not paused");
+        _;
+    }
+
+    // State variable for pause functionality
+    bool public paused;
 
     constructor(
         address _token,
@@ -170,16 +182,16 @@ contract ProjectContract {
         uint256 projectId,
         uint256 _allocationSize,
         uint256 _vestingLength
-    ) public payable onlyDuringBidding(projectId) onlyWhitelisted(projectId) {
+    ) public payable onlyDuringBidding(projectId) onlyWhitelisted(projectId) whenNotPaused {
         Project storage project = projects[projectId];
         require(_allocationSize > 0, "Bid amount must be greater than 0");
         require(
-            _allocationSize > 0 && _allocationSize % 100 == 0,
-            "Bid amount must be greater than 0 and multiple of 100 USDT"
+            _allocationSize % 100 == 0,
+            "Bid amount must be a multiple of 100 USDT"
         );
         require(
             _vestingLength > 0 && _vestingLength % 3 == 0,
-            "Vesting lengths must be greater than 0 and multiple of 3 months"
+            "Vesting lengths must be a multiple of 3 months"
         );
 
         uint256 allowed = USDT.allowance(msg.sender, address(this));
@@ -209,6 +221,14 @@ contract ProjectContract {
             project.bids[msg.sender].timestamp = block.timestamp;
         }
 
+        // Referral reward logic
+        // address referrer = referrals[msg.sender];
+        // if (referrer != address(0)) {
+            // Assuming a fixed reward of 10 USDT for the referrer
+        //     uint256 reward = 10 * 10**6; // 10 USDT with 6 decimals
+        //     require(USDT.transfer(referrer, reward), "Referral reward transfer failed");
+        // }
+
         emit BidPlaced(
             projectId,
             _allocationSize,
@@ -221,6 +241,7 @@ contract ProjectContract {
         external
         payable
         onlyProjectOwnerOrOperator(projectId)
+        whenNotPaused
     {
         Project storage project = projects[projectId];
         require(project.biddingActive, "Bidding has already ended");
@@ -510,6 +531,7 @@ contract ProjectContract {
 
     function withdraw(uint256 projectId)
         external
+        nonReentrant
         biddingEnded(projectId)
         onlyNFTHolder
     {
@@ -545,7 +567,6 @@ contract ProjectContract {
         emit Withdrawal(projectId, msg.sender, vestedAmount, block.timestamp);
     }
 
-    // Function to add an address to the whitelist for a specific project
     function addToWhitelist(uint256 projectId, address _address)
         public
         onlyOwnerOrOperator
@@ -553,7 +574,6 @@ contract ProjectContract {
         projects[projectId].whitelist[_address] = true;
     }
 
-    // Function to remove an address from the whitelist for a specific project
     function removeFromWhitelist(uint256 projectId, address _address)
         public
         onlyOwnerOrOperator
@@ -561,7 +581,6 @@ contract ProjectContract {
         projects[projectId].whitelist[_address] = false;
     }
 
-    // Record referral
     function addReferral(address referrer, address referee) public {
         require(referrals[referee] == address(0), "Referee already referred");
         require(referrer != referee, "Cannot refer yourself");
@@ -580,6 +599,39 @@ contract ProjectContract {
         returns (address[] memory)
     {
         return referralsByUser[referrer];
+    }
+
+    function cancelBid(uint256 projectId) public onlyDuringBidding(projectId) {
+        Project storage project = projects[projectId];
+        Bid storage bid = project.bids[msg.sender];
+        require(bid.timestamp > 0, "No bid found for the sender");
+
+        uint256 refundAmount = bid.allocationSize;
+        require(USDT.transfer(msg.sender, refundAmount), "Refund failed");
+
+        delete project.bids[msg.sender];
+        project.bidCounter--;
+
+        for (uint256 i = 0; i < project.bidderAddresses.length; i++) {
+            if (project.bidderAddresses[i] == msg.sender) {
+                project.bidderAddresses[i] = project.bidderAddresses[project.bidderAddresses.length - 1];
+                project.bidderAddresses.pop();
+                break;
+            }
+        }
+    }
+
+    function pause() public onlyOwner whenNotPaused {
+        paused = true;
+    }
+
+    function unpause() public onlyOwner whenPaused {
+        paused = false;
+    }
+
+    function updateProjectOwner(uint256 projectId, address newOwner) public onlyProjectOwner(projectId) {
+        require(newOwner != address(0), "New owner is the zero address");
+        projects[projectId].owner = newOwner;
     }
 
     function updateProjectDetails(
@@ -654,7 +706,6 @@ contract ProjectContract {
         NFTContract = AlignerNFT(newNFTAddress);
     }
 
-    // Function to withdraw USDT from the contract by the owner
     function withdrawUSDT() public payable onlyOwnerOrOperator {
         uint256 contractBalance = USDT.balanceOf(address(this));
         require(contractBalance > 0, "Insufficient balance in contract");
