@@ -1,93 +1,606 @@
-# ALIGNERS Contract
+# Comprehensive Deployment and Usage Guide
 
+## Prerequisites
 
+Before you start, ensure you have the following:
 
-## Getting started
+- **Node.js** and **npm** installed
+- **Truffle** or **Hardhat** development framework
+- **MetaMask** or another Ethereum wallet
+- **Infura** or another Ethereum node service provider
+- **OpenZeppelin Contracts** library installed
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Contract 1: AlignerNFT
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+### Description
 
-## Add your files
+The `AlignerNFT` contract is an ERC721 token with additional functionalities such as minting, pausing, and URI management.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+### Deployment
 
+1. **Install Dependencies**:
+
+   ```sh
+   npm install @openzeppelin/contracts
+   ```
+
+2. **Create Deployment Script**:
+
+   Create a new deployment script in your `migrations` folder, e.g., `2_deploy_alignernft.js`:
+
+   ```javascript
+   const AlignerNFT = artifacts.require("AlignerNFT");
+
+   module.exports = function (deployer, network, accounts) {
+     const initialOwner = accounts[0]; // Replace with the desired owner address
+     deployer.deploy(AlignerNFT, initialOwner);
+   };
+   ```
+
+3. **Deploy Contract**:
+
+   ```sh
+   truffle migrate --network <network-name>
+   ```
+
+### Usage
+
+#### For the Owner
+
+1. **Minting Tokens**:
+
+   ```javascript
+   const instance = await AlignerNFT.deployed();
+   await instance.safeMint(recipientAddress, { from: ownerAddress });
+   ```
+
+2. **Minting Batch Tokens**:
+
+   ```javascript
+   await instance.safeMintBatch(recipientAddress, quantity, { from: ownerAddress });
+   ```
+
+3. **Pausing and Unpausing**:
+
+   ```javascript
+   await instance.pause({ from: ownerAddress });
+   await instance.unpause({ from: ownerAddress });
+   ```
+
+4. **Setting Base URI**:
+
+   ```javascript
+   await instance.setBaseURI("https://example.com/api/token/", { from: ownerAddress });
+   ```
+
+5. **Adding Minters**:
+
+   ```javascript
+   await instance.setMinter(minterAddress, true, { from: ownerAddress });
+   ```
+
+6. **Removing Minters**:
+
+   ```javascript
+   await instance.setMinter(minterAddress, false, { from: ownerAddress });
+   ```
+
+## Contract 2: IWO
+
+### Description
+
+The `IWO` contract is an ERC20 token with minting capabilities and supports EIP-2612 (permit).
+
+### Deployment
+
+1. **Create Deployment Script**:
+
+   Create a new deployment script in your `migrations` folder, e.g., `3_deploy_iwo.js`:
+
+   ```javascript
+   const IWO = artifacts.require("IWO");
+
+   module.exports = function (deployer, network, accounts) {
+     const initialOwner = accounts[0]; // Replace with the desired owner address
+     deployer.deploy(IWO, initialOwner);
+   };
+   ```
+
+2. **Deploy Contract**:
+
+   ```sh
+   truffle migrate --network <network-name>
+   ```
+
+### Usage
+
+#### For the Owner
+
+1. **Minting Tokens**:
+
+   ```javascript
+   const instance = await IWO.deployed();
+   await instance.mint(recipientAddress, amount, { from: ownerAddress });
+   ```
+
+2. **Transferring Ownership**:
+
+   ```javascript
+   await instance.transferOwnership(newOwnerAddress, { from: ownerAddress });
+   ```
+
+## Contract 3: MockUSDT
+
+### Description
+
+The `MockUSDT` contract is a mock ERC20 token used for testing purposes.
+
+### Deployment
+
+1. **Create Deployment Script**:
+
+   Create a new deployment script in your `migrations` folder, e.g., `4_deploy_mockusdt.js`:
+
+   ```javascript
+   const MockUSDT = artifacts.require("MockUSDT");
+
+   module.exports = function (deployer) {
+     deployer.deploy(MockUSDT);
+   };
+   ```
+
+2. **Deploy Contract**:
+
+   ```sh
+   truffle migrate --network <network-name>
+   ```
+
+### Usage
+
+- **Initial Minting**: The initial mint is done during deployment. The deployer address receives all the minted tokens.
+
+### Additional Usage Examples
+
+#### Checking Balances
+
+For ERC20 tokens like `IWO` and `MockUSDT`:
+
+```javascript
+const iwoInstance = await IWO.deployed();
+const balance = await iwoInstance.balanceOf(userAddress);
+console.log(balance.toString());
+
+const usdtInstance = await MockUSDT.deployed();
+const balance = await usdtInstance.balanceOf(userAddress);
+console.log(balance.toString());
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/moaz.edilbe/aligners-contract.git
-git branch -M main
-git push -uf origin main
+
+## Comprehensive Guide for ProjectContract
+
+### Step-by-Step Guide
+
+1. **Deploy Contracts**:
+
+   Deploy the `IWO`, `MockUSDT`, `AlignerNFT`, and `ProjectContract` contracts as outlined in their respective sections.
+
+2. **Create Project (Owner/Project Owner)**:
+
+   ```javascript
+   const projectInstance = await ProjectContract.deployed();
+   const biddingStartDate = Math.floor(Date.now() / 1000); // Current time in seconds
+   const biddingDuration = 7 * 24 * 60 * 60; // 1 week
+
+   await projectInstance.createProject(
+     "ProjectName",
+     "ProjectDescription",
+     "SocialInfo",
+     biddingStartDate,
+     biddingDuration,
+     { from: ownerAddress } // or projectOwnerAddress
+   );
+   ```
+
+3. **Add Vesting Round (Owner/Project Owner)**:
+
+   ```javascript
+   const projectId = 1; // Replace with your project ID
+   const roundAmount = 1000000; // Replace with your desired round amount
+   const iwoPrice = 10; // Replace with your desired IWO price
+
+   await projectInstance.addVestingRound(projectId, roundAmount, iwoPrice, { from: ownerAddress } // or projectOwnerAddress);
+   ```
+
+4. **Whitelist Addresses (Owner/Project Owner)**:
+
+   ```javascript
+   const userAddress = "0x123...abc"; // Replace with the actual user address to whitelist
+
+   await projectInstance.addToWhitelist(projectId, userAddress, { from: ownerAddress } // or projectOwnerAddress);
+   ```
+
+5. **Place Bids (Bidders)**:
+
+   ```javascript
+   const allocationSize = 1000; // USDT amount
+   const vestingLength = 6; // Vesting length in months
+
+   await projectInstance.placeBid(projectId, allocationSize, vestingLength, { from: bidderAddress });
+   ```
+
+6. **End Bidding (Owner/Project Owner)**:
+
+   ```javascript
+   await projectInstance.endBidding(projectId, { from: ownerAddress } // or projectOwnerAddress);
+   ```
+
+7. **Withdraw Tokens (Bidders)**:
+
+   Ensure the bidding has ended and the tokens are vested.
+
+   ```javascript
+   await projectInstance.withdraw(projectId, { from: bidderAddress });
+   ```
+
+8. **Withdraw USDT (Owner)**:
+
+   ```javascript
+   await projectInstance.withdrawUSDT({ from: ownerAddress });
+   ```
+
+### Additional Usage Examples for ProjectContract
+
+#### Updating Project Owner (Project Owner)
+
+```javascript
+const newOwnerAddress = "0xabc...123"; // Replace with new owner address
+
+await projectInstance.updateProjectOwner(projectId, newOwnerAddress, { from: currentProjectOwnerAddress });
 ```
 
-## Integrate with your tools
+#### Updating Operator Address (Owner/Project Owner)
 
-- [ ] [Set up project integrations](https://gitlab.com/moaz.edilbe/aligners-contract/-/settings/integrations)
+```javascript
+const newOperatorAddress = "0xdef...456"; // Replace with new operator address
 
-## Collaborate with your team
+await projectInstance.updateOperatorAddress(projectId, newOperatorAddress, { from: ownerAddress } // or projectOwnerAddress);
+```
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+#### Updating Token Addresses (Owner)
 
-## Test and Deploy
+```javascript
+const newIWOAddress = "0xghi...789"; // Replace with new IWO token address
+const newUSDTAddress = "0xjkl...012"; // Replace with new USDT token address
+const newNFTAddress = "0xabc...345"; // Replace with new NFT contract address
 
-Use the built-in continuous integration in GitLab.
+await projectInstance.updateTokenAddresses(newIWOAddress, newUSDTAddress, newNFTAddress, { from: ownerAddress });
+```
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### Notes
 
-***
+- Ensure you have the appropriate addresses and permissions set for each action.
+- Replace placeholders like `<network-name>` with actual network configurations.
+- These instructions assume basic familiarity with Truffle or Hardhat for Ethereum development. Adjust paths and commands based on the actual development environment used.
 
-# Editing this README
+This comprehensive guide should help you effectively deploy and manage the provided smart contracts.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
 
-## Suggestions for a good README
+# Comprehensive Deployment and Usage Guide for ProjectContract
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+## Prerequisites
 
-## Name
-Choose a self-explaining name for your project.
+Before you start, ensure you have the following:
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+- **Node.js** and **npm** installed
+- **Truffle** or **Hardhat** development framework
+- **MetaMask** or another Ethereum wallet
+- **Infura** or another Ethereum node service provider
+- **OpenZeppelin Contracts** library installed
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+## ProjectContract
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### Description
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+The `ProjectContract` manages project creation, bidding, and vesting processes, leveraging the `IWO`, `USDT`, and `AlignerNFT` contracts. It also includes functionalities for the contract owner to withdraw USDT.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+### Deployment
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+1. **Install Dependencies**:
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+   ```sh
+   npm install @openzeppelin/contracts
+   ```
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+2. **Create Deployment Script**:
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+   Create a new deployment script in your `migrations` folder, e.g., `5_deploy_projectcontract.js`:
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+   ```javascript
+   const ProjectContract = artifacts.require("ProjectContract");
+   const IWO = artifacts.require("IWO");
+   const MockUSDT = artifacts.require("MockUSDT");
+   const AlignerNFT = artifacts.require("AlignerNFT");
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+   module.exports = async function (deployer, network, accounts) {
+     const owner = accounts[0]; // Replace with the desired owner address
+     const iwo = await IWO.deployed();
+     const mockUSDT = await MockUSDT.deployed();
+     const alignerNFT = await AlignerNFT.deployed();
 
-## License
-For open source projects, say how it is licensed.
+     await deployer.deploy(ProjectContract, iwo.address, alignerNFT.address, mockUSDT.address, owner);
+   };
+   ```
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+3. **Deploy Contract**:
+
+   ```sh
+   truffle migrate --network <network-name>
+   ```
+
+### Usage
+
+#### For the Owner
+
+1. **Creating a Project**:
+
+   ```javascript
+   const projectInstance = await ProjectContract.deployed();
+   const biddingStartDate = Math.floor(Date.now() / 1000); // Current time in seconds
+   const biddingDuration = 7 * 24 * 60 * 60; // 1 week
+
+   await projectInstance.createProject(
+     "ProjectName",
+     "ProjectDescription",
+     "SocialInfo",
+     biddingStartDate,
+     biddingDuration,
+     { from: ownerAddress }
+   );
+   ```
+
+2. **Adding a Vesting Round**:
+
+   ```javascript
+   const projectId = 1; // Replace with your project ID
+   const roundAmount = 1000000; // Replace with your desired round amount
+   const iwoPrice = 10; // Replace with your desired IWO price
+
+   await projectInstance.addVestingRound(projectId, roundAmount, iwoPrice, { from: ownerAddress });
+   ```
+
+3. **Whitelisting Addresses**:
+
+   ```javascript
+   const userAddress = "0x123...abc"; // Replace with the actual user address to whitelist
+
+   await projectInstance.addToWhitelist(projectId, userAddress, { from: ownerAddress });
+   ```
+
+4. **Ending Bidding**:
+
+   ```javascript
+   await projectInstance.endBidding(projectId, { from: ownerAddress });
+   ```
+
+5. **Updating Project Details**:
+
+   ```javascript
+   await projectInstance.updateProjectDetails(
+     projectId,
+     "NewProjectName",
+     "NewProjectDescription",
+     "NewSocialInfo",
+     { from: ownerAddress }
+   );
+   ```
+
+6. **Pausing and Unpausing Contract**:
+
+   ```javascript
+   await projectInstance.pause({ from: ownerAddress });
+   await projectInstance.unpause({ from: ownerAddress });
+   ```
+
+7. **Withdrawing USDT**:
+
+   ```javascript
+   await projectInstance.withdrawUSDT({ from: ownerAddress });
+   ```
+
+#### For the Project Owner
+
+1. **Creating a Project**:
+
+   ```javascript
+   const projectInstance = await ProjectContract.deployed();
+   const biddingStartDate = Math.floor(Date.now() / 1000); // Current time in seconds
+   const biddingDuration = 7 * 24 * 60 * 60; // 1 week
+
+   await projectInstance.createProject(
+     "ProjectName",
+     "ProjectDescription",
+     "SocialInfo",
+     biddingStartDate,
+     biddingDuration,
+     { from: projectOwnerAddress }
+   );
+   ```
+
+2. **Adding a Vesting Round**:
+
+   ```javascript
+   const projectId = 1; // Replace with your project ID
+   const roundAmount = 1000000; // Replace with your desired round amount
+   const iwoPrice = 10; // Replace with your desired IWO price
+
+   await projectInstance.addVestingRound(projectId, roundAmount, iwoPrice, { from: projectOwnerAddress });
+   ```
+
+3. **Whitelisting Addresses**:
+
+   ```javascript
+   const userAddress = "0x123...abc"; // Replace with the actual user address to whitelist
+
+   await projectInstance.addToWhitelist(projectId, userAddress, { from: projectOwnerAddress });
+   ```
+
+4. **Ending Bidding**:
+
+   ```javascript
+   await projectInstance.endBidding(projectId, { from: projectOwnerAddress });
+   ```
+
+5. **Updating Project Details**:
+
+   ```javascript
+   await projectInstance.updateProjectDetails(
+     projectId,
+     "NewProjectName",
+     "NewProjectDescription",
+     "NewSocialInfo",
+     { from: projectOwnerAddress }
+   );
+   ```
+
+#### For the Bidders
+
+1. **Placing a Bid**:
+
+   Ensure the contract is not paused and the bidding period is active.
+
+   ```javascript
+   const projectId = 1; // Replace with actual project ID
+   const allocationSize = 1000; // USDT amount
+   const vestingLength = 6; // Vesting length in months
+
+   await projectInstance.placeBid(projectId, allocationSize, vestingLength, { from: bidderAddress });
+   ```
+
+2. **Checking Bidding Details**:
+
+   ```javascript
+   const bidDetails = await projectInstance.getBidDetails(projectId, bidderAddress);
+   console.log(bidDetails);
+   ```
+
+3. **Checking Project Details**:
+
+   ```javascript
+   const projectDetails = await projectInstance.getProjectDetails(projectId);
+   console.log(projectDetails);
+   ```
+
+4. **Withdrawing Tokens**:
+
+   Ensure the bidding has ended and the tokens are vested.
+
+   ```javascript
+   await projectInstance.withdraw(projectId, { from: bidderAddress });
+   ```
+
+### Step-by-Step Guide
+
+1. **Deploy Contracts**:
+
+   Deploy the `IWO`, `MockUSDT`, `AlignerNFT`, and `ProjectContract` contracts as outlined in the respective sections.
+
+2. **Create Project (Owner/Project Owner)**:
+
+   ```javascript
+   const projectInstance = await ProjectContract.deployed();
+   const biddingStartDate = Math.floor(Date.now() / 1000); // Current time in seconds
+   const biddingDuration = 7 * 24 * 60 * 60; // 1 week
+
+   await projectInstance.createProject(
+     "ProjectName",
+     "ProjectDescription",
+     "SocialInfo",
+     biddingStartDate,
+     biddingDuration,
+     { from: ownerAddress } // or projectOwnerAddress
+   );
+   ```
+
+3. **Add Vesting Round (Owner/Project Owner)**:
+
+   ```javascript
+   const projectId = 1; // Replace with your project ID
+   const roundAmount = 1000000; // Replace with your desired round amount
+   const iwoPrice = 10; // Replace with your desired IWO price
+
+   await projectInstance.addVestingRound(projectId, roundAmount, iwoPrice, { from: ownerAddress } // or projectOwnerAddress);
+   ```
+
+4. **Whitelist Addresses (Owner/Project Owner)**:
+
+   ```javascript
+   const userAddress = "0x123...abc"; // Replace with the actual user address to whitelist
+
+   await projectInstance.addToWhitelist(projectId, userAddress, { from: ownerAddress } // or projectOwnerAddress);
+   ```
+
+5. **Place Bids (Bidders)**:
+
+   ```javascript
+   const allocationSize = 1000; // USDT amount
+   const vestingLength = 6; // Vesting length in months
+
+   await projectInstance.placeBid(projectId, allocationSize, vestingLength, { from: bidderAddress });
+   ```
+
+6. **End Bidding (Owner/Project Owner)**:
+
+   ```javascript
+   await projectInstance.endBidding(projectId, { from: ownerAddress } // or projectOwnerAddress);
+   ```
+
+7. **Withdraw Tokens (Bidders)**:
+
+   Ensure the bidding has ended and the tokens are vested.
+
+   ```javascript
+   await projectInstance.withdraw(projectId, { from: bidderAddress });
+   ```
+
+8. **Withdraw USDT (Owner)**:
+
+   ```javascript
+   await projectInstance.withdrawUSDT({ from: ownerAddress });
+   ```
+
+### Additional Usage Examples
+
+#### Updating Project Owner (Project Owner)
+
+```javascript
+const newOwnerAddress = "0xabc...123"; // Replace with new owner address
+
+await projectInstance.updateProjectOwner(projectId, newOwnerAddress, { from: currentProjectOwnerAddress });
+```
+
+#### Updating Operator Address (Owner/Project Owner)
+
+```javascript
+const newOperatorAddress = "0xdef...456"; // Replace with new operator address
+
+await projectInstance.updateOperatorAddress(projectId, newOperatorAddress, { from: ownerAddress } // or projectOwnerAddress);
+```
+
+#### Updating Token Addresses (Owner)
+
+```javascript
+const newI
+
+WOAddress = "0xghi...789"; // Replace with new IWO token address
+const newUSDTAddress = "0xjkl...012"; // Replace with new USDT token address
+const newNFTAddress = "0xabc...345"; // Replace with new NFT contract address
+
+await projectInstance.updateTokenAddresses(newIWOAddress, newUSDTAddress, newNFTAddress, { from: ownerAddress });
+```
+
+### Notes
+
+- Ensure you have the appropriate addresses and permissions set for each action.
+- Replace placeholders like `<network-name>` with actual network configurations.
+- These instructions assume basic familiarity with Truffle or Hardhat for Ethereum development. Adjust paths and commands based on the actual development environment used.
+
+This comprehensive guide should help you effectively deploy and manage the provided smart contracts.
