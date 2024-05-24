@@ -17,6 +17,9 @@ contract ProjectContract is ReentrancyGuard {
     uint256 public projectCounter;
     mapping(address => address) public referrals; // Mapping to store who referred whom
     mapping(address => address[]) public referralsByUser; // Mapping to store referrals made by each user
+    // State variable for pause functionality
+    bool public paused;
+    uint256 public period = 2 minutes;
 
     // Structs
     struct Project {
@@ -49,6 +52,26 @@ contract ProjectContract is ReentrancyGuard {
         bool locked;
         address bidder;
     }
+    struct ProjectData {
+        address owner;
+        string projectName;
+        string projectDescription;
+        string socialInfo;
+        uint256 biddingStartDate;
+        uint256 biddingEndDate;
+        bool biddingActive;
+        uint256 bidCounter;
+        address operatorAddress;
+        VestingRound[] vestingRounds;
+        Bid[] bids;
+    }
+    struct ClaimingDetails {
+        uint256 allocationSize;
+        uint256 balance;
+        uint256 date;
+        bool claimAllowed;
+    }
+
 
     // Events
     event VestingRoundAdded(
@@ -139,9 +162,6 @@ contract ProjectContract is ReentrancyGuard {
         require(paused, "Contract is not paused");
         _;
     }
-
-    // State variable for pause functionality
-    bool public paused;
 
     constructor(
         address _token,
@@ -413,20 +433,6 @@ contract ProjectContract is ReentrancyGuard {
         );
     }
 
-    struct ProjectData {
-        address owner;
-        string projectName;
-        string projectDescription;
-        string socialInfo;
-        uint256 biddingStartDate;
-        uint256 biddingEndDate;
-        bool biddingActive;
-        uint256 bidCounter;
-        address operatorAddress;
-        VestingRound[] vestingRounds;
-        Bid[] bids;
-    }
-
     function getAllProjects() external view returns (ProjectData[] memory) {
         ProjectData[] memory allProjects = new ProjectData[](projectCounter);
         for (uint256 i = 1; i <= projectCounter; i++) {
@@ -459,15 +465,6 @@ contract ProjectContract is ReentrancyGuard {
         }
         return allBids;
     }
-
-    struct ClaimingDetails {
-        uint256 allocationSize;
-        uint256 balance;
-        uint256 date;
-        bool claimAllowed;
-    }
-
-    uint256 public period = 2 minutes;
 
     function calculateVestedAmount(
         uint256 projectId,
@@ -581,7 +578,7 @@ contract ProjectContract is ReentrancyGuard {
         projects[projectId].whitelist[_address] = false;
     }
 
-    function addReferral(address referrer, address referee) public {
+    function addReferral(address referrer, address referee) public onlyOwnerOrOperator {
         require(referrals[referee] == address(0), "Referee already referred");
         require(referrer != referee, "Cannot refer yourself");
         referrals[referee] = referrer;
@@ -599,26 +596,6 @@ contract ProjectContract is ReentrancyGuard {
         returns (address[] memory)
     {
         return referralsByUser[referrer];
-    }
-
-    function cancelBid(uint256 projectId) public onlyDuringBidding(projectId) {
-        Project storage project = projects[projectId];
-        Bid storage bid = project.bids[msg.sender];
-        require(bid.timestamp > 0, "No bid found for the sender");
-
-        uint256 refundAmount = bid.allocationSize;
-        require(USDT.transfer(msg.sender, refundAmount), "Refund failed");
-
-        delete project.bids[msg.sender];
-        project.bidCounter--;
-
-        for (uint256 i = 0; i < project.bidderAddresses.length; i++) {
-            if (project.bidderAddresses[i] == msg.sender) {
-                project.bidderAddresses[i] = project.bidderAddresses[project.bidderAddresses.length - 1];
-                project.bidderAddresses.pop();
-                break;
-            }
-        }
     }
 
     function pause() public onlyOwner whenNotPaused {

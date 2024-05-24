@@ -17,4 +17,8 @@ contract IWO is ERC20, Ownable, ERC20Permit {
     function mint(address to, uint256 amount) public onlyOwner {
         _mint(to, amount);
     }
+
+    function transferOwnership(address newOwner) public override onlyOwner {
+        _transferOwnership(newOwner);
+    }
 }
