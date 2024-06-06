@@ -134,8 +134,7 @@ contract ProjectContract is ReentrancyGuard {
     modifier biddingEnded(uint256 projectId) {
         require(
             !projects[projectId].biddingActive ||
-                !(block.timestamp >= projects[projectId].biddingStartDate &&
-                    block.timestamp <= projects[projectId].biddingEndDate),
+                block.timestamp > projects[projectId].biddingEndDate,
             "Bidding is active"
         );
         _;
@@ -147,13 +146,6 @@ contract ProjectContract is ReentrancyGuard {
         );
         _;
     }
-    // modifier onlyNFTHolder() {
-    //     require(
-    //         NFTContract.balanceOf(msg.sender) > 0,
-    //         "Only NFT holders of this project can perform this action"
-    //     );
-    //     _;
-    // }
     modifier onlyNFTHolder(uint256 tokenId) {
         require(
             NFTContract.ownerOf(tokenId) == msg.sender,
@@ -254,14 +246,6 @@ contract ProjectContract is ReentrancyGuard {
             project.bids[msg.sender].vestingLength += _vestingLength;
             project.bids[msg.sender].timestamp = block.timestamp;
         }
-
-        // Referral reward logic
-        // address referrer = referrals[msg.sender];
-        // if (referrer != address(0)) {
-        // Assuming a fixed reward of 10 USDT for the referrer
-        //     uint256 reward = 10 * 10**6; // 10 USDT with 6 decimals
-        //     require(USDT.transfer(referrer, reward), "Referral reward transfer failed");
-        // }
 
         emit BidPlaced(
             projectId,
