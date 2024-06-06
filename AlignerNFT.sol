@@ -60,9 +60,10 @@ contract AlignerNFT is
         _;
     }
 
-    function safeMint(address to) public onlyMinter {
+    function safeMint(address to) public onlyMinter returns (uint256) {
         uint256 tokenId = _nextTokenId++;
         _safeMint(to, tokenId);
+        return tokenId;
     }
 
     function safeMintBatch(address to, uint256 quantity) public onlyMinter {
