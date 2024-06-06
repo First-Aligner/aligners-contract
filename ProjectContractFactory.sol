@@ -51,6 +51,7 @@ contract ProjectContract is ReentrancyGuard {
         uint256 lockedIWOSize;
         bool locked;
         address bidder;
+        uint256 nftTokenId;
     }
     struct ProjectData {
         address owner;
@@ -71,7 +72,6 @@ contract ProjectContract is ReentrancyGuard {
         uint256 date;
         bool claimAllowed;
     }
-
 
     // Events
     event VestingRoundAdded(
@@ -147,10 +147,17 @@ contract ProjectContract is ReentrancyGuard {
         );
         _;
     }
-    modifier onlyNFTHolder() {
+    // modifier onlyNFTHolder() {
+    //     require(
+    //         NFTContract.balanceOf(msg.sender) > 0,
+    //         "Only NFT holders of this project can perform this action"
+    //     );
+    //     _;
+    // }
+    modifier onlyNFTHolder(uint256 tokenId) {
         require(
-            NFTContract.balanceOf(msg.sender) > 0,
-            "Only NFT holders of this project can perform this action"
+            NFTContract.ownerOf(tokenId) == msg.sender,
+            "Only the current NFT holder can perform this action"
         );
         _;
     }
@@ -202,7 +209,13 @@ contract ProjectContract is ReentrancyGuard {
         uint256 projectId,
         uint256 _allocationSize,
         uint256 _vestingLength
-    ) public payable onlyDuringBidding(projectId) onlyWhitelisted(projectId) whenNotPaused {
+    )
+        public
+        payable
+        onlyDuringBidding(projectId)
+        onlyWhitelisted(projectId)
+        whenNotPaused
+    {
         Project storage project = projects[projectId];
         require(_allocationSize > 0, "Bid amount must be greater than 0");
         require(
@@ -232,7 +245,8 @@ contract ProjectContract is ReentrancyGuard {
                 timestamp: block.timestamp,
                 lockedIWOSize: 0,
                 locked: false,
-                bidder: msg.sender
+                bidder: msg.sender,
+                nftTokenId: 0
             });
             project.bids[msg.sender] = b;
         } else {
@@ -244,7 +258,7 @@ contract ProjectContract is ReentrancyGuard {
         // Referral reward logic
         // address referrer = referrals[msg.sender];
         // if (referrer != address(0)) {
-            // Assuming a fixed reward of 10 USDT for the referrer
+        // Assuming a fixed reward of 10 USDT for the referrer
         //     uint256 reward = 10 * 10**6; // 10 USDT with 6 decimals
         //     require(USDT.transfer(referrer, reward), "Referral reward transfer failed");
         // }
@@ -338,7 +352,8 @@ contract ProjectContract is ReentrancyGuard {
         for (uint256 i = 0; i < bidders.length; i++) {
             address bidder = bidders[i];
             if (projects[projectId].bids[bidder].allocationIWOSize > 0) {
-                NFTContract.safeMint(bidder);
+                uint256 tokenId = NFTContract.safeMint(bidder);
+                projects[projectId].bids[bidder].nftTokenId = tokenId;
             }
         }
     }
@@ -526,23 +541,38 @@ contract ProjectContract is ReentrancyGuard {
         return claimingDetails;
     }
 
-    function withdraw(uint256 projectId)
+    function withdraw(uint256 projectId, uint256 tokenId)
         external
         nonReentrant
         biddingEnded(projectId)
-        onlyNFTHolder
+        onlyNFTHolder(tokenId)
     {
         Project storage project = projects[projectId];
-        Bid storage bid = project.bids[msg.sender];
-        require(!project.biddingActive, "Bidding must be ended to withdraw");
+        address currentNFTHolder = NFTContract.ownerOf(tokenId);
+
+        // Find the bid that matches the given tokenId
+        address bidCreator;
+        bool bidFound = false;
+        for (uint256 i = 0; i < project.bidderAddresses.length; i++) {
+            address bidderAddress = project.bidderAddresses[i];
+            if (project.bids[bidderAddress].nftTokenId == tokenId) {
+                bidCreator = bidderAddress;
+                bidFound = true;
+                break;
+            }
+        }
+
+        require(bidFound, "No bid found for the given token ID");
+        Bid storage bid = project.bids[bidCreator];
         require(bid.timestamp > 0, "No bid found for the sender");
+
         uint256 currentMonth = (block.timestamp - project.biddingEndDate) /
             period;
         require(currentMonth > 0, "No vested amount to withdraw yet");
 
         uint256 vestedAmount = calculateVestedAmount(
             projectId,
-            msg.sender,
+            bidCreator,
             currentMonth
         );
 
@@ -551,17 +581,24 @@ contract ProjectContract is ReentrancyGuard {
             "No new vested amount to withdraw"
         );
 
+        uint256 withdrawableAmount = vestedAmount - bid.lockedIWOSize;
+
         require(
-            IWO.transfer(msg.sender, vestedAmount - bid.lockedIWOSize),
+            IWO.transfer(currentNFTHolder, withdrawableAmount),
             "Token transfer failed during withdrawal"
         );
 
         bid.lockedIWOSize = vestedAmount;
         if (bid.lockedIWOSize >= bid.allocationIWOSize) {
-            project.bids[msg.sender].locked = true;
+            bid.locked = true;
         }
 
-        emit Withdrawal(projectId, msg.sender, vestedAmount, block.timestamp);
+        emit Withdrawal(
+            projectId,
+            currentNFTHolder,
+            withdrawableAmount,
+            block.timestamp
+        );
     }
 
     function addToWhitelist(uint256 projectId, address _address)
@@ -578,7 +615,7 @@ contract ProjectContract is ReentrancyGuard {
         projects[projectId].whitelist[_address] = false;
     }
 
-    function addReferral(address referrer, address referee) public onlyOwnerOrOperator {
+    function addReferral(address referrer, address referee) public {
         require(referrals[referee] == address(0), "Referee already referred");
         require(referrer != referee, "Cannot refer yourself");
         referrals[referee] = referrer;
@@ -606,7 +643,10 @@ contract ProjectContract is ReentrancyGuard {
         paused = false;
     }
 
-    function updateProjectOwner(uint256 projectId, address newOwner) public onlyProjectOwner(projectId) {
+    function updateProjectOwner(uint256 projectId, address newOwner)
+        public
+        onlyProjectOwner(projectId)
+    {
         require(newOwner != address(0), "New owner is the zero address");
         projects[projectId].owner = newOwner;
     }
