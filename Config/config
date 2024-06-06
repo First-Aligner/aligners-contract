@@ -1,8 +1,8 @@
-Project_ContractAddress="0xa1749857caecad882ba45acef31b95416f522beb"
+Project_ContractAddress="0x3e79376a4aa4993e51da59cb5bf5a0178cd34dc9"
 Project_OwnerAddress="0x765654fb411dD684640191491750a0E075Ffe571"
 Project_Network="zkEVM"
 
-NFT_ContractAddress="0x69c665443e52b2ad397617b19ef19e366adb9bf2"
+NFT_ContractAddress="0x0494e96d13b29ed167ee74063f9cc792a2efd521"
 NFT_OwnerAddress="0x765654fb411dD684640191491750a0E075Ffe571"
 NFT_Network="zkEVM"
 
