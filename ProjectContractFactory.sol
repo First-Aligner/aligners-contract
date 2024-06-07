@@ -20,6 +20,7 @@ contract ProjectContract is ReentrancyGuard {
     // State variable for pause functionality
     bool public paused;
     uint256 public period = 2 minutes;
+    uint256 public FixedPoint = 10**6;
 
     // Structs
     struct Project {
@@ -285,7 +286,8 @@ contract ProjectContract is ReentrancyGuard {
 
             for (uint256 j = 0; j < project.vestingRounds.length; j++) {
                 VestingRound storage round = project.vestingRounds[j];
-                uint256 allocationIWO = allocationSizeUSDT / round.iwoPrice;
+                uint256 allocationIWO = (allocationSizeUSDT * FixedPoint) /
+                    round.iwoPrice;
                 uint256 leftRoundAmount = round.roundAmount - round.bidsAmount;
                 uint256 tokensToDeduct = allocationIWO < leftRoundAmount
                     ? allocationIWO
@@ -295,7 +297,9 @@ contract ProjectContract is ReentrancyGuard {
                 project.bids[bidder].allocationIWOSize += tokensToDeduct;
 
                 allocationIWO -= tokensToDeduct;
-                allocationSizeUSDT -= tokensToDeduct * round.iwoPrice;
+                allocationSizeUSDT -=
+                    (tokensToDeduct * round.iwoPrice) /
+                    FixedPoint;
 
                 if (round.roundAmount - round.bidsAmount <= 0)
                     round.completed = true;
