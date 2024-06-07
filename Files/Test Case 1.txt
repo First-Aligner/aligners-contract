@@ -1,5 +1,13 @@
 Test Case 1:
 
+Project: 
+ - Name: Aligners
+ - Description: Welcome to Aligners, the revolutionary launchpad focused on prioritizing investors with the most added value.
+ - SocialInfo: x.com
+ - BiddingStartDate: 1717735695 
+ - BiddingDuration: 31556926
+
+
 Rounds:
 _roundAmount(number of tokens): 19000    8000     
 _iwoPrice( in USDT )          :   1       2

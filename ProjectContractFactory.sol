@@ -405,6 +405,47 @@ contract ProjectContract is ReentrancyGuard {
         );
     }
 
+    function getBidDetailsByTokenId(uint256 projectId, uint256 tokenId)
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            bool,
+            address
+        )
+    {
+        Project storage project = projects[projectId];
+        address bidder = address(0);
+        bool bidFound = false;
+
+        // Find the bid that matches the given tokenId
+        for (uint256 i = 0; i < project.bidderAddresses.length; i++) {
+            address bidderAddress = project.bidderAddresses[i];
+            if (project.bids[bidderAddress].nftTokenId == tokenId) {
+                bidder = bidderAddress;
+                bidFound = true;
+                break;
+            }
+        }
+
+        require(bidFound, "No bid found for the given token ID");
+        Bid memory bid = project.bids[bidder];
+
+        return (
+            bid.allocationSize,
+            bid.vestingLength,
+            bid.allocationIWOSize,
+            bid.timestamp,
+            bid.lockedIWOSize,
+            bid.locked,
+            bid.bidder
+        );
+    }
+
     function getProjectDetails(uint256 projectId)
         external
         view
@@ -430,6 +471,31 @@ contract ProjectContract is ReentrancyGuard {
             project.biddingActive,
             project.operatorAddress
         );
+    }
+
+    function getProjectFullDetails(uint256 projectId)
+        external
+        view
+        returns (ProjectData memory)
+    {
+        Project storage project = projects[projectId];
+
+        // Create and return the ProjectData struct
+        ProjectData memory projectData = ProjectData({
+            owner: project.owner,
+            projectName: project.projectName,
+            projectDescription: project.projectDescription,
+            socialInfo: project.socialInfo,
+            biddingStartDate: project.biddingStartDate,
+            biddingEndDate: project.biddingEndDate,
+            biddingActive: project.biddingActive,
+            bidCounter: project.bidCounter,
+            operatorAddress: project.operatorAddress,
+            vestingRounds: project.vestingRounds,
+            bids: getBidsArray(project.bidderAddresses, project)
+        });
+
+        return projectData;
     }
 
     function getAllProjects() external view returns (ProjectData[] memory) {
@@ -494,6 +560,58 @@ contract ProjectContract is ReentrancyGuard {
         returns (ClaimingDetails[] memory)
     {
         Project storage project = projects[projectId];
+        Bid storage bid = project.bids[bidder];
+
+        uint256 claimingPeriods = bid.vestingLength;
+        ClaimingDetails[] memory claimingDetails = new ClaimingDetails[](
+            claimingPeriods
+        );
+
+        uint256 claimedAmount = 0;
+        uint256 vestedAmount = 0;
+        uint256 currentPeriod = block.timestamp;
+
+        for (uint256 i = 0; i < claimingPeriods; i++) {
+            vestedAmount = calculateVestedAmount(projectId, bidder, i + 1);
+
+            uint256 balance = vestedAmount - claimedAmount;
+            claimedAmount = vestedAmount;
+
+            bool claimAllowed = balance > 0 &&
+                currentPeriod >= project.biddingEndDate + ((i + 1) * period);
+
+            claimingDetails[i] = ClaimingDetails({
+                allocationSize: bid.allocationIWOSize,
+                balance: balance,
+                date: project.biddingEndDate + ((i + 1) * period),
+                claimAllowed: claimAllowed
+            });
+        }
+
+        return claimingDetails;
+    }
+
+    function getClaimingDetailsByTokenId(uint256 projectId, uint256 tokenId)
+        public
+        view
+        biddingEnded(projectId)
+        returns (ClaimingDetails[] memory)
+    {
+        Project storage project = projects[projectId];
+        address bidder = address(0);
+        bool bidFound = false;
+
+        // Find the bid that matches the given tokenId
+        for (uint256 i = 0; i < project.bidderAddresses.length; i++) {
+            address bidderAddress = project.bidderAddresses[i];
+            if (project.bids[bidderAddress].nftTokenId == tokenId) {
+                bidder = bidderAddress;
+                bidFound = true;
+                break;
+            }
+        }
+
+        require(bidFound, "No bid found for the given token ID");
         Bid storage bid = project.bids[bidder];
 
         uint256 claimingPeriods = bid.vestingLength;
