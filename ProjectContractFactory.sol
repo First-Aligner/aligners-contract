@@ -545,13 +545,21 @@ contract ProjectContract is ReentrancyGuard {
 
         require(bid.timestamp > 0, "Bid not found");
 
-        uint256 monthlyVestingAmount = bid.allocationIWOSize /
-            bid.vestingLength;
+        uint256 totalAllocation = bid.allocationIWOSize;
+        uint256 monthlyVestingAmount = totalAllocation / bid.vestingLength;
 
+        // Calculate the vested amount up to the given month
         uint256 vestedAmount = monthlyVestingAmount * month;
 
-        if (vestedAmount > bid.allocationIWOSize) {
-            vestedAmount = bid.allocationIWOSize;
+        // If it's the last month, add any remaining tokens to the vested amount
+        if (month == bid.vestingLength) {
+            uint256 remainder = totalAllocation % bid.vestingLength;
+            vestedAmount += remainder;
+        }
+
+        // Ensure vestedAmount does not exceed the total allocation
+        if (vestedAmount > totalAllocation) {
+            vestedAmount = totalAllocation;
         }
 
         return vestedAmount;
