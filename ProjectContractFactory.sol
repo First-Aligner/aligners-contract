@@ -391,7 +391,8 @@ contract ProjectContract is ReentrancyGuard {
             uint256,
             uint256,
             uint256,
-            bool
+            bool,
+            uint256
         )
     {
         Bid memory bid = projects[projectId].bids[bidder];
@@ -401,7 +402,8 @@ contract ProjectContract is ReentrancyGuard {
             bid.allocationIWOSize,
             bid.timestamp,
             bid.lockedIWOSize,
-            bid.locked
+            bid.locked,
+            bid.nftTokenId
         );
     }
 
@@ -415,6 +417,7 @@ contract ProjectContract is ReentrancyGuard {
             uint256,
             uint256,
             bool,
+            uint256,
             address
         )
     {
@@ -442,6 +445,7 @@ contract ProjectContract is ReentrancyGuard {
             bid.timestamp,
             bid.lockedIWOSize,
             bid.locked,
+            bid.nftTokenId,
             bid.bidder
         );
     }
