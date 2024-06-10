@@ -45,9 +45,11 @@ contract ProjectContract is ReentrancyGuard {
         uint256 iwoPrice;
     }
     struct Bid {
-        uint256 allocationSize;
+        uint256 allocationSize; // USDT
+        uint256 allocatedUSDT; // USDT allocated for IWO tokens
+        uint256 refundableUSDT; // USDT to be refunded
+        uint256 allocationIWOSize; // IWO
         uint256 vestingLength;
-        uint256 allocationIWOSize;
         uint256 timestamp;
         uint256 lockedIWOSize;
         bool locked;
@@ -233,6 +235,8 @@ contract ProjectContract is ReentrancyGuard {
             project.bidderAddresses.push(msg.sender);
             Bid memory b = Bid({
                 allocationSize: _allocationSize,
+                allocatedUSDT: 0,
+                refundableUSDT: 0,
                 vestingLength: _vestingLength,
                 allocationIWOSize: 0,
                 timestamp: block.timestamp,
@@ -296,22 +300,38 @@ contract ProjectContract is ReentrancyGuard {
                 round.bidsAmount += tokensToDeduct;
                 project.bids[bidder].allocationIWOSize += tokensToDeduct;
 
-                allocationIWO -= tokensToDeduct;
-                allocationSizeUSDT -=
-                    (tokensToDeduct * round.iwoPrice) /
+                uint256 usdtUsed = (tokensToDeduct * round.iwoPrice) /
                     FixedPoint;
+                allocationSizeUSDT -= usdtUsed;
+                project.bids[bidder].allocatedUSDT += usdtUsed;
 
                 if (round.roundAmount - round.bidsAmount <= 0)
                     round.completed = true;
-
                 if (allocationSizeUSDT <= 0) break;
             }
 
             uint256 vestedAmount = project.bids[bidder].allocationIWOSize;
-            require(
-                IWO.transferFrom(project.owner, address(this), vestedAmount),
-                "Token transfer failed"
-            );
+            uint256 refundableUSDT = project.bids[bidder].allocationSize -
+                project.bids[bidder].allocatedUSDT;
+            project.bids[bidder].refundableUSDT = refundableUSDT;
+            // Refund remaining USDT if not enough IWO tokens available
+            if (refundableUSDT > 0) {
+                require(
+                    USDT.transfer(bidder, refundableUSDT),
+                    "USDT refund transfer failed"
+                );
+            }
+            // If vested amount is greater than zero, transfer IWO tokens to the contract
+            if (vestedAmount > 0) {
+                require(
+                    IWO.transferFrom(
+                        project.owner,
+                        address(this),
+                        vestedAmount
+                    ),
+                    "Token transfer failed"
+                );
+            }
         }
         mintNFT(projectId);
     }
@@ -395,6 +415,8 @@ contract ProjectContract is ReentrancyGuard {
             uint256,
             uint256,
             uint256,
+            uint256,
+            uint256,
             bool,
             uint256
         )
@@ -402,6 +424,8 @@ contract ProjectContract is ReentrancyGuard {
         Bid memory bid = projects[projectId].bids[bidder];
         return (
             bid.allocationSize,
+            bid.allocatedUSDT,
+            bid.refundableUSDT,
             bid.vestingLength,
             bid.allocationIWOSize,
             bid.timestamp,
@@ -415,6 +439,8 @@ contract ProjectContract is ReentrancyGuard {
         external
         view
         returns (
+            uint256,
+            uint256,
             uint256,
             uint256,
             uint256,
@@ -444,6 +470,8 @@ contract ProjectContract is ReentrancyGuard {
 
         return (
             bid.allocationSize,
+            bid.allocatedUSDT,
+            bid.refundableUSDT,
             bid.vestingLength,
             bid.allocationIWOSize,
             bid.timestamp,
@@ -556,7 +584,7 @@ contract ProjectContract is ReentrancyGuard {
         uint256 vestedAmount = monthlyVestingAmount * month;
 
         // If it's the last month, add any remaining tokens to the vested amount
-        if (month == bid.vestingLength) {
+        if (month >= bid.vestingLength) {
             uint256 remainder = totalAllocation % bid.vestingLength;
             vestedAmount += remainder;
         }

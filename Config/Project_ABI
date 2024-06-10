@@ -400,12 +400,22 @@
 							},
 							{
 								"internalType": "uint256",
-								"name": "vestingLength",
+								"name": "allocatedUSDT",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "refundableUSDT",
 								"type": "uint256"
 							},
 							{
 								"internalType": "uint256",
 								"name": "allocationIWOSize",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "vestingLength",
 								"type": "uint256"
 							},
 							{
@@ -488,6 +498,16 @@
 				"type": "uint256"
 			},
 			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
 				"internalType": "bool",
 				"name": "",
 				"type": "bool"
@@ -516,6 +536,16 @@
 		],
 		"name": "getBidDetailsByTokenId",
 		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
 			{
 				"internalType": "uint256",
 				"name": "",
@@ -837,12 +867,22 @@
 							},
 							{
 								"internalType": "uint256",
-								"name": "vestingLength",
+								"name": "allocatedUSDT",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "refundableUSDT",
 								"type": "uint256"
 							},
 							{
 								"internalType": "uint256",
 								"name": "allocationIWOSize",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "vestingLength",
 								"type": "uint256"
 							},
 							{
