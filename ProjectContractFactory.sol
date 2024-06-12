@@ -74,6 +74,7 @@ contract ProjectContract is ReentrancyGuard {
         uint256 balance;
         uint256 date;
         bool claimAllowed;
+        bool withdrawn;
     }
 
     // Events
@@ -623,12 +624,14 @@ contract ProjectContract is ReentrancyGuard {
 
             bool claimAllowed = balance > 0 &&
                 currentPeriod >= project.biddingEndDate + ((i + 1) * period);
+            bool withdrawn = bid.lockedIWOSize >= claimedAmount;
 
             claimingDetails[i] = ClaimingDetails({
                 allocationSize: bid.allocationIWOSize,
                 balance: balance,
                 date: project.biddingEndDate + ((i + 1) * period),
-                claimAllowed: claimAllowed
+                claimAllowed: claimAllowed,
+                withdrawn: withdrawn
             });
         }
 
@@ -675,12 +678,14 @@ contract ProjectContract is ReentrancyGuard {
 
             bool claimAllowed = balance > 0 &&
                 currentPeriod >= project.biddingEndDate + ((i + 1) * period);
+            bool withdrawn = bid.lockedIWOSize >= claimedAmount;
 
             claimingDetails[i] = ClaimingDetails({
                 allocationSize: bid.allocationIWOSize,
                 balance: balance,
                 date: project.biddingEndDate + ((i + 1) * period),
-                claimAllowed: claimAllowed
+                claimAllowed: claimAllowed,
+                withdrawn: withdrawn
             });
         }
 

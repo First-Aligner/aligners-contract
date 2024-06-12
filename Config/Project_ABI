@@ -645,6 +645,11 @@
 						"internalType": "bool",
 						"name": "claimAllowed",
 						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "withdrawn",
+						"type": "bool"
 					}
 				],
 				"internalType": "struct ProjectContract.ClaimingDetails[]",
@@ -690,6 +695,11 @@
 					{
 						"internalType": "bool",
 						"name": "claimAllowed",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "withdrawn",
 						"type": "bool"
 					}
 				],
