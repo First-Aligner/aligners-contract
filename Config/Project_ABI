@@ -1239,6 +1239,29 @@
 		"inputs": [
 			{
 				"internalType": "address",
+				"name": "newIWOAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "newUSDTAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "newNFTAddress",
+				"type": "address"
+			}
+		],
+		"name": "updateContractAddresses",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
 				"name": "newOperatorAddress",
 				"type": "address"
 			}
@@ -1323,29 +1346,6 @@
 		"name": "updateProjectOwner",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newIWOAddress",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "newUSDTAddress",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "newNFTAddress",
-				"type": "address"
-			}
-		],
-		"name": "updateTokenAddresses",
-		"outputs": [],
-		"stateMutability": "payable",
 		"type": "function"
 	},
 	{
