@@ -114,4 +114,24 @@ contract AlignerNFT is
     function _baseURI() internal view override returns (string memory) {
         return _baseTokenURI;
     }
+
+    /**
+     * @dev Function to get the list of token IDs owned by `owner`.
+     * @param owner The address to query the tokens of.
+     * @return A list of token IDs owned by the given address.
+     */
+    function tokensOfOwner(address owner)
+        public
+        view
+        returns (uint256[] memory)
+    {
+        uint256 tokenCount = balanceOf(owner);
+        uint256[] memory tokenIds = new uint256[](tokenCount);
+
+        for (uint256 i = 0; i < tokenCount; i++) {
+            tokenIds[i] = tokenOfOwnerByIndex(owner, i);
+        }
+
+        return tokenIds;
+    }
 }

@@ -19,7 +19,7 @@ contract ProjectContract is ReentrancyGuard {
     mapping(address => address[]) public referralsByUser; // Mapping to store referrals made by each user
     // State variable for pause functionality
     bool public paused;
-    uint256 public period = 2 minutes;
+    uint256 public period = 5 minutes;
     uint256 public FixedPoint = 10**6;
 
     // Structs
@@ -224,10 +224,17 @@ contract ProjectContract is ReentrancyGuard {
         );
 
         uint256 allowed = USDT.allowance(msg.sender, address(this));
-        require(allowed >= _allocationSize, "Check the token allowance");
+        require(
+            allowed >= _allocationSize * (10**18),
+            "Check the token allowance"
+        );
 
         require(
-            USDT.transferFrom(msg.sender, address(this), _allocationSize),
+            USDT.transferFrom(
+                msg.sender,
+                address(this),
+                _allocationSize * (10**18)
+            ),
             "Failed to transfer USDT"
         );
 
@@ -275,15 +282,15 @@ contract ProjectContract is ReentrancyGuard {
 
         // Sort bids based on allocation size in descending order
         address[] memory bidders = new address[](project.bidCounter);
-        uint256[] memory allocationSizes = new uint256[](project.bidCounter);
+        uint256[] memory vestingLengthArray = new uint256[](project.bidCounter);
 
         for (uint256 i = 0; i < project.bidCounter; i++) {
             address bidderAddress = project.bidderAddresses[i];
             bidders[i] = bidderAddress;
-            allocationSizes[i] = project.bids[bidderAddress].allocationSize;
+            vestingLengthArray[i] = project.bids[bidderAddress].vestingLength;
         }
 
-        selectionSort(bidders, allocationSizes, project.bidCounter);
+        selectionSort(bidders, vestingLengthArray, project.bidCounter);
 
         for (uint256 i = 0; i < project.bidCounter; i++) {
             address bidder = bidders[i];
@@ -318,7 +325,7 @@ contract ProjectContract is ReentrancyGuard {
             // Refund remaining USDT if not enough IWO tokens available
             if (refundableUSDT > 0) {
                 require(
-                    USDT.transfer(bidder, refundableUSDT),
+                    USDT.transfer(bidder, refundableUSDT * (10**18)),
                     "USDT refund transfer failed"
                 );
             }
@@ -328,7 +335,7 @@ contract ProjectContract is ReentrancyGuard {
                     IWO.transferFrom(
                         project.owner,
                         address(this),
-                        vestedAmount
+                        vestedAmount * (10**18)
                     ),
                     "Token transfer failed"
                 );
@@ -339,20 +346,16 @@ contract ProjectContract is ReentrancyGuard {
 
     function selectionSort(
         address[] memory bidders,
-        uint256[] memory allocationSizes,
+        uint256[] memory arr,
         uint256 n
     ) internal pure {
         for (uint256 i = 0; i < n - 1; i++) {
             uint256 maxIndex = i;
             for (uint256 j = i + 1; j < n; j++)
-                if (allocationSizes[j] > allocationSizes[maxIndex])
-                    maxIndex = j;
+                if (arr[j] > arr[maxIndex]) maxIndex = j;
 
             (bidders[i], bidders[maxIndex]) = (bidders[maxIndex], bidders[i]);
-            (allocationSizes[i], allocationSizes[maxIndex]) = (
-                allocationSizes[maxIndex],
-                allocationSizes[i]
-            );
+            (arr[i], arr[maxIndex]) = (arr[maxIndex], arr[i]);
         }
     }
 
@@ -735,7 +738,7 @@ contract ProjectContract is ReentrancyGuard {
         uint256 withdrawableAmount = vestedAmount - bid.lockedIWOSize;
 
         require(
-            IWO.transfer(currentNFTHolder, withdrawableAmount),
+            IWO.transfer(currentNFTHolder, withdrawableAmount * (10**18)),
             "Token transfer failed during withdrawal"
         );
 
@@ -864,7 +867,7 @@ contract ProjectContract is ReentrancyGuard {
         operatorAddress = newOperatorAddress;
     }
 
-    function updateTokenAddresses(
+    function updateContractAddresses(
         address newIWOAddress,
         address newUSDTAddress,
         address newNFTAddress
