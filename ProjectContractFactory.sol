@@ -213,14 +213,14 @@ contract ProjectContract is ReentrancyGuard {
         whenNotPaused
     {
         Project storage project = projects[projectId];
-        require(_allocationSize > 0, "Bid amount must be greater than 0");
+        require(_allocationSize >= 0, "Bid amount must be greater than 0");
         require(
             _allocationSize % 100 == 0,
             "Bid amount must be a multiple of 100 USDT"
         );
         require(
-            _vestingLength > 0 && _vestingLength % 3 == 0,
-            "Vesting lengths must be a multiple of 3 months"
+            _vestingLength >= 0 && _vestingLength % 1 == 0,
+            "Vesting lengths must be a multiple of 1 months"
         );
 
         uint256 allowed = USDT.allowance(msg.sender, address(this));
