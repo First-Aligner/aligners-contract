@@ -581,6 +581,8 @@ contract ProjectContract is ReentrancyGuard {
 
         require(bid.timestamp > 0, "Bid not found");
 
+        if (bid.vestingLength == 0) return bid.allocationIWOSize;
+        
         uint256 totalAllocation = bid.allocationIWOSize;
         uint256 monthlyVestingAmount = totalAllocation / bid.vestingLength;
 
