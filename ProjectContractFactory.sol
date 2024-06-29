@@ -582,7 +582,7 @@ contract ProjectContract is ReentrancyGuard {
         require(bid.timestamp > 0, "Bid not found");
 
         if (bid.vestingLength == 0) return bid.allocationIWOSize;
-        
+
         uint256 totalAllocation = bid.allocationIWOSize;
         uint256 monthlyVestingAmount = totalAllocation / bid.vestingLength;
 
@@ -628,13 +628,13 @@ contract ProjectContract is ReentrancyGuard {
             claimedAmount = vestedAmount;
 
             bool claimAllowed = balance > 0 &&
-                currentPeriod >= project.biddingEndDate + ((i + 1) * period);
+                currentPeriod >= project.biddingEndDate + (i * period);
             bool withdrawn = bid.lockedIWOSize >= claimedAmount;
 
             claimingDetails[i] = ClaimingDetails({
                 allocationSize: bid.allocationIWOSize,
                 balance: balance,
-                date: project.biddingEndDate + ((i + 1) * period),
+                date: project.biddingEndDate + (i * period),
                 claimAllowed: claimAllowed,
                 withdrawn: withdrawn
             });
@@ -682,13 +682,13 @@ contract ProjectContract is ReentrancyGuard {
             claimedAmount = vestedAmount;
 
             bool claimAllowed = balance > 0 &&
-                currentPeriod >= project.biddingEndDate + ((i + 1) * period);
+                currentPeriod >= project.biddingEndDate + (i * period);
             bool withdrawn = bid.lockedIWOSize >= claimedAmount;
 
             claimingDetails[i] = ClaimingDetails({
                 allocationSize: bid.allocationIWOSize,
                 balance: balance,
-                date: project.biddingEndDate + ((i + 1) * period),
+                date: project.biddingEndDate + (i * period),
                 claimAllowed: claimAllowed,
                 withdrawn: withdrawn
             });
@@ -724,12 +724,12 @@ contract ProjectContract is ReentrancyGuard {
 
         uint256 currentMonth = (block.timestamp - project.biddingEndDate) /
             period;
-        require(currentMonth > 0, "No vested amount to withdraw yet");
+        require(currentMonth >= 0, "No vested amount to withdraw yet");
 
         uint256 vestedAmount = calculateVestedAmount(
             projectId,
             bidCreator,
-            currentMonth
+            currentMonth + 1
         );
 
         require(
@@ -877,6 +877,11 @@ contract ProjectContract is ReentrancyGuard {
         IWO = IERC20(newIWOAddress);
         USDT = IERC20(newUSDTAddress);
         NFTContract = AlignerNFT(newNFTAddress);
+    }
+
+    // New functions to set and get the period
+    function updatePeriod(uint256 newPeriod) external onlyOwner {
+        period = newPeriod;
     }
 
     function withdrawUSDT() public payable onlyOwnerOrOperator {
